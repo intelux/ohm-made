@@ -1,2 +1,3 @@
 # ohm-made
-The ohm-made library.
+
+The Ohm-made integration for [Home Assistant](https://www.home-assistant.io/).
