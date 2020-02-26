@@ -1,9 +1,0 @@
-{
-	"domain": "ohm_made",
-	"name": "Ohm-made",
-	"documentation": "https://github.com/intelux/ohm-made",
-	"dependencies": [],
-	"after_dependencies": [],
-	"codeowners": ["@ereOn"],
-	"requirements": []
-}
