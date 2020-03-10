@@ -8,12 +8,15 @@
 #define MAX_LEDS 128
 #define DEFAULT_NUM_LEDS 16
 
-struct LEDsConfig {
+struct LEDsConfig
+{
   bool configured = false;
   uint16_t numLEDs = DEFAULT_NUM_LEDS;
 
-  void configuredOrDefaults() {
-    if (!configured) {
+  void configuredOrDefaults()
+  {
+    if (!configured)
+    {
       *this = {};
     }
   }
@@ -29,14 +32,17 @@ CRGB leds[MAX_LEDS];
 #define AP_PASSPHRASE "password"
 #define DEFAULT_HTTP_PORT 80
 
-struct WiFiConfig {
+struct WiFiConfig
+{
   bool configured = false;
   char ssid[64] = {};
   char passphrase[64] = {};
   uint16_t httpPort = DEFAULT_HTTP_PORT;
 
-  void configuredOrDefaults() {
-    if (!configured) {
+  void configuredOrDefaults()
+  {
+    if (!configured)
+    {
       *this = {};
     }
   }
@@ -53,7 +59,8 @@ void handleNotFound();
 #define EXTERNAL_LED_PIN D3
 #define BUTTON_PIN D5
 
-void setup(void){
+void setup(void)
+{
   Serial.begin(74880);
   delay(1000);
 
@@ -76,7 +83,8 @@ void setup(void){
 
   Serial.println("Initializing WiFi...");
 
-  if (!wiFiConfig.configured) {
+  if (!wiFiConfig.configured)
+  {
     Serial.println("WiFi has never been configured. Starting in Access-Point mode...");
 
     IPAddress ip(192, 168, 16, 1);
@@ -87,20 +95,26 @@ void setup(void){
     uint8_t mode = 0;
     wifi_softap_set_dhcps_offer_option(OFFER_ROUTER, &mode);
 
-    if (WiFi.softAP(AP_SSID, AP_PASSPHRASE)) {
+    if (WiFi.softAP(AP_SSID, AP_PASSPHRASE))
+    {
       Serial.printf("Access-Point SSID: %s\n", AP_SSID);
       Serial.printf("Access-Point passphrase: %s\n", AP_PASSPHRASE);
       Serial.printf("Access-Point IP address: %s\n", WiFi.softAPIP().toString().c_str());
-    } else {
+    }
+    else
+    {
       Serial.println("Failed to start Access-Point! Something might be wrong with the chip.");
     }
-  } else {
+  }
+  else
+  {
     Serial.println("WiFi has been configured. Starting in client mode...");
 
     wifiMulti.addAP(wiFiConfig.ssid, wiFiConfig.passphrase);
     Serial.printf("Connecting to '%s'...\n", wiFiConfig.ssid);
 
-    while (wifiMulti.run() != WL_CONNECTED) {
+    while (wifiMulti.run() != WL_CONNECTED)
+    {
       digitalWrite(LED_BUILTIN, HIGH);
       digitalWrite(EXTERNAL_LED_PIN, HIGH);
       delay(250);
@@ -116,41 +130,109 @@ void setup(void){
   server.on("/v1/status/", HTTP_PUT, handleSetStatus);
   server.onNotFound(handleNotFound);
 
-  const char* headerkeys[] = {"content-type"};
-  server.collectHeaders(headerkeys, sizeof(headerkeys)/sizeof(char*));
+  const char *headerkeys[] = {"content-type"};
+  server.collectHeaders(headerkeys, sizeof(headerkeys) / sizeof(char *));
   server.begin(wiFiConfig.httpPort);
 
   Serial.printf("HTTP server started on port %d.\n", wiFiConfig.httpPort);
 }
 
-void loop(void){
+int pressedTime = 0;
+
+void loop(void)
+{
   server.handleClient();
 
-  if (digitalRead(BUTTON_PIN) == HIGH) {
+  if (digitalRead(BUTTON_PIN) == LOW)
+  {
+    int pressedDuration = millis() - pressedTime;
+
+    if (pressedDuration < 2000)
+    {
+      if ((pressedDuration / 500) % 2 == 0)
+      {
+        digitalWrite(EXTERNAL_LED_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(EXTERNAL_LED_PIN, HIGH);
+      }
+
+      FastLED.showColor(CRGB::OrangeRed);
+    }
+    else if (pressedDuration < 4000)
+    {
+      if ((pressedDuration / 250) % 2 == 0)
+      {
+        digitalWrite(EXTERNAL_LED_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(EXTERNAL_LED_PIN, HIGH);
+      }
+
+      FastLED.showColor(CRGB::Orange);
+    }
+    else if (pressedDuration < 6000)
+    {
+      if ((pressedDuration / 125) % 2 == 0)
+      {
+        digitalWrite(EXTERNAL_LED_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(EXTERNAL_LED_PIN, HIGH);
+      }
+
+      FastLED.showColor(CRGB::Yellow);
+    }
+    else if (pressedDuration < 8000)
+    {
+      if ((pressedDuration / 67) % 2 == 0)
+      {
+        digitalWrite(EXTERNAL_LED_PIN, LOW);
+      }
+      else
+      {
+        digitalWrite(EXTERNAL_LED_PIN, HIGH);
+      }
+
+      FastLED.showColor(CRGB::YellowGreen);
+    }
+    else
+    {
+      digitalWrite(EXTERNAL_LED_PIN, HIGH);
+      FastLED.showColor(CRGB::Green);
+    }
+  }
+  else
+  {
+    pressedTime = millis();
     digitalWrite(EXTERNAL_LED_PIN, LOW);
     FastLED.showColor(CRGB::Red);
-  } else {
-    digitalWrite(EXTERNAL_LED_PIN, HIGH);
-    FastLED.showColor(CRGB::Green);
   }
 }
 
-void handleGetStatus() {
+void handleGetStatus()
+{
   int v = analogRead(A0);
   char tmp[16];
   snprintf(tmp, 16, "{\"value\": %0.2f}", v / 1024.0f);
   server.send(200, "application/json", tmp);
 }
 
-void handleSetStatus() {
-  if (!server.hasArg("plain")) {
+void handleSetStatus()
+{
+  if (!server.hasArg("plain"))
+  {
     server.send(400, "text/plain", "Missing message body.\n");
     return;
   }
 
   const String contentType = server.header("content-type");
 
-  if (contentType != "application/json") {
+  if (contentType != "application/json")
+  {
     char tmp[128];
     snprintf(tmp, 128, "Expecting 'application/json' content-type, got: '%s'.\n", contentType.c_str());
     server.send(400, "text/plain", tmp);
@@ -161,7 +243,8 @@ void handleSetStatus() {
 
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
-  if (error) {
+  if (error)
+  {
     char tmp[128];
     snprintf(tmp, 128, "JSON error: %s", error.c_str());
     server.send(400, "text/plain", tmp);
@@ -169,11 +252,12 @@ void handleSetStatus() {
   }
 
   static uint8_t hue = 0;
-  FastLED.showColor(CHSV(hue+= 32, 255, 255));
+  FastLED.showColor(CHSV(hue += 32, 255, 255));
 
   server.send(200, "application/json", "{}\n");
 }
 
-void handleNotFound(){
+void handleNotFound()
+{
   server.send(404, "text/plain", "Not found.\n");
 }
