@@ -1,5 +1,6 @@
 #include "config.h"
 #include "web.h"
+#include "reset.h"
 
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
@@ -15,10 +16,6 @@ ESP8266WiFiMulti wifiMulti;
 void handleGetStatus();
 void handleSetStatus();
 void handleNotFound();
-
-#define LEDS_DATA_PIN 1
-#define EXTERNAL_LED_PIN D3
-#define BUTTON_PIN D5
 
 void setup(void)
 {
@@ -109,79 +106,11 @@ void setup(void)
   }
 }
 
-int pressedTime = 0;
-
 void loop(void)
 {
+  resetLoop();
   webServerLoop();
   MDNS.update();
 
-  if (digitalRead(BUTTON_PIN) == LOW)
-  {
-    int pressedDuration = millis() - pressedTime;
-
-    if (pressedDuration < 2000)
-    {
-      if ((pressedDuration / 500) % 2 == 0)
-      {
-        digitalWrite(EXTERNAL_LED_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(EXTERNAL_LED_PIN, HIGH);
-      }
-
-      FastLED.showColor(CRGB::OrangeRed);
-    }
-    else if (pressedDuration < 4000)
-    {
-      if ((pressedDuration / 250) % 2 == 0)
-      {
-        digitalWrite(EXTERNAL_LED_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(EXTERNAL_LED_PIN, HIGH);
-      }
-
-      FastLED.showColor(CRGB::Orange);
-    }
-    else if (pressedDuration < 6000)
-    {
-      if ((pressedDuration / 125) % 2 == 0)
-      {
-        digitalWrite(EXTERNAL_LED_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(EXTERNAL_LED_PIN, HIGH);
-      }
-
-      FastLED.showColor(CRGB::Yellow);
-    }
-    else if (pressedDuration < 8000)
-    {
-      if ((pressedDuration / 67) % 2 == 0)
-      {
-        digitalWrite(EXTERNAL_LED_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(EXTERNAL_LED_PIN, HIGH);
-      }
-
-      FastLED.showColor(CRGB::YellowGreen);
-    }
-    else
-    {
-      digitalWrite(EXTERNAL_LED_PIN, HIGH);
-      FastLED.showColor(CRGB::Green);
-    }
-  }
-  else
-  {
-    pressedTime = millis();
-    digitalWrite(EXTERNAL_LED_PIN, LOW);
-    FastLED.showColor(CRGB::Red);
-  }
+  FastLED.showColor(CRGB::White);
 }

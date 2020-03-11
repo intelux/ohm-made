@@ -10,6 +10,11 @@
 // The maximum support number of leds.
 #define MAX_LEDS 128
 
+// PIN configuration.
+#define LEDS_DATA_PIN 1
+#define EXTERNAL_LED_PIN D3
+#define BUTTON_PIN D5
+
 class Config
 {
 public:
@@ -20,6 +25,7 @@ public:
     Config() = default;
     bool Load();
     bool Save() const;
+    bool Clear();
 
 private:
     mutable uint64_t magic_value = 0;

@@ -34,3 +34,19 @@ bool Config::Save() const
 
     return true;
 }
+
+bool Config::Clear()
+{
+    magic_value = 0;
+
+    EEPROM.begin(sizeof(*this));
+
+    for (int i = 0; i < sizeof(*this); i++) {
+        EEPROM.write(i, 0);
+    }
+
+    EEPROM.commit();
+    EEPROM.end();
+
+    return true;
+}
