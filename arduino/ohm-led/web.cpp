@@ -2,11 +2,10 @@
 
 #include "index.h"
 #include "config.h"
+#include "state.h"
 
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
-
-#include <FastLED.h>
 
 ESP8266WebServer server;
 
@@ -87,18 +86,14 @@ void handleSetConfiguration()
     ESP.restart();
 }
 
-void handleGetStatus()
+void handleGetState()
 {
     //TODO: Implement.
-    int v = analogRead(A0);
-    char tmp[16];
-    snprintf(tmp, 16, "{\"value\": %0.2f}", v / 1024.0f);
-    server.send(200, "application/json", tmp);
+    server.send(200, "application/json", "{}\n");
 }
 
-void handleSetStatus()
+void handleSetState()
 {
-    //TODO: Implement.
     if (!server.hasArg("plain"))
     {
         server.send(400, "text/plain", "Missing message body.\n");
@@ -122,15 +117,18 @@ void handleSetStatus()
     if (error)
     {
         char tmp[128];
-        snprintf(tmp, 128, "JSON error: %s", error.c_str());
+        snprintf(tmp, 128, "JSON error: %s\n", error.c_str());
         server.send(400, "text/plain", tmp);
         return;
     }
 
-    static uint8_t hue = 0;
-    FastLED.showColor(CHSV(hue += 32, 255, 255));
+    if (!state.FromJsonDocument(doc))
+    {
+        server.send(400, "text/plain", "Invalid state.\n");
+        return;
+    }
 
-    server.send(200, "application/json", "{}\n");
+    handleGetState();
 }
 
 void handleNotFound()
@@ -144,8 +142,8 @@ void startWebServer(uint16_t port)
     server.on("/v1/configuration/", HTTP_GET, handleGetConfiguration);
     server.on("/v1/configuration/", HTTP_POST, handleSetConfiguration);
     server.on("/v1/configuration/", HTTP_PUT, handleSetConfiguration);
-    server.on("/v1/status/", HTTP_GET, handleGetStatus);
-    server.on("/v1/status/", HTTP_PUT, handleSetStatus);
+    server.on("/v1/state/", HTTP_GET, handleGetState);
+    server.on("/v1/state/", HTTP_PUT, handleSetState);
     server.onNotFound(handleNotFound);
 
     const char *headerkeys[] = {"content-type"};

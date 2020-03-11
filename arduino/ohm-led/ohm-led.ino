@@ -1,21 +1,13 @@
 #include "config.h"
-#include "web.h"
 #include "reset.h"
-
-#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
-#include <FastLED.h>
-
-CRGB leds[MAX_LEDS];
+#include "state.h"
+#include "web.h"
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266mDNS.h>
 
 ESP8266WiFiMulti wifiMulti;
-
-void handleGetStatus();
-void handleSetStatus();
-void handleNotFound();
 
 void setup(void)
 {
@@ -38,7 +30,7 @@ void setup(void)
     Serial.println(F("Loaded existing configuration."));
   }
 
-  FastLED.addLeds<WS2812, LEDS_DATA_PIN, GRB>(leds, config.num_leds);
+  setupState();
   Serial.printf("Controller has %d led(s).\n", config.num_leds);
 
   Serial.println(F("Initializing WiFi..."));
@@ -109,8 +101,7 @@ void setup(void)
 void loop(void)
 {
   resetLoop();
+  stateLoop();
   webServerLoop();
   MDNS.update();
-
-  FastLED.showColor(CRGB::White);
 }

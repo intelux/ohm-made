@@ -21,6 +21,7 @@ public:
     static const uint64_t MAGIC_VALUE = 0xBADA551;
     static const uint16_t DEFAULT_HTTP_PORT = 80;
     static const uint16_t DEFAULT_NUM_LEDS = 16;
+    static const int DEFAULT_FPS = 120;
 
     Config() = default;
     bool Load();
@@ -44,6 +45,7 @@ public:
     char passphrase[64] = {};
     uint16_t http_port = DEFAULT_HTTP_PORT;
     uint16_t num_leds = DEFAULT_NUM_LEDS;
+    int fps = DEFAULT_FPS;
 
     bool hasName() const
     {

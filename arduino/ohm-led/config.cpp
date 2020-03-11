@@ -19,6 +19,21 @@ bool Config::Load()
 
     EEPROM.end();
 
+    if (num_leds == 0)
+    {
+        num_leds = DEFAULT_NUM_LEDS;
+    }
+
+    if (http_port == 0)
+    {
+        http_port = DEFAULT_HTTP_PORT;
+    }
+
+    if (fps <= 0)
+    {
+        fps = DEFAULT_FPS;
+    }
+
     return result;
 }
 
@@ -41,7 +56,8 @@ bool Config::Clear()
 
     EEPROM.begin(sizeof(*this));
 
-    for (int i = 0; i < sizeof(*this); i++) {
+    for (int i = 0; i < sizeof(*this); i++)
+    {
         EEPROM.write(i, 0);
     }
 
