@@ -1,55 +1,16 @@
-#include <ESP_EEPROM.h>
-
-#include <ArduinoJson.h>
+#include "config.h"
+#include "web.h"
 
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
-
-#define MAX_LEDS 128
-#define DEFAULT_NUM_LEDS 16
-
-struct LEDsConfig
-{
-  bool configured = false;
-  uint16_t numLEDs = DEFAULT_NUM_LEDS;
-
-  void configuredOrDefaults()
-  {
-    if (!configured)
-    {
-      *this = {};
-    }
-  }
-} ledsConfig;
 
 CRGB leds[MAX_LEDS];
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-#include <ESP8266WebServer.h>
-
-#define AP_SSID "ohm-led"
-#define AP_PASSPHRASE "password"
-#define DEFAULT_HTTP_PORT 80
-
-struct WiFiConfig
-{
-  bool configured = false;
-  char ssid[64] = {};
-  char passphrase[64] = {};
-  uint16_t httpPort = DEFAULT_HTTP_PORT;
-
-  void configuredOrDefaults()
-  {
-    if (!configured)
-    {
-      *this = {};
-    }
-  }
-} wiFiConfig;
+#include <ESP8266mDNS.h>
 
 ESP8266WiFiMulti wifiMulti;
-ESP8266WebServer server;
 
 void handleGetStatus();
 void handleSetStatus();
@@ -65,27 +26,29 @@ void setup(void)
   delay(1000);
 
   Serial.println();
-  Serial.println("Initializing...");
+  Serial.println(F("Initializing..."));
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(EXTERNAL_LED_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
 
-  EEPROM.begin(sizeof(ledsConfig) + sizeof(wiFiConfig));
-  EEPROM.get(0, ledsConfig);
-  EEPROM.get(sizeof(ledsConfig), wiFiConfig);
-
-  ledsConfig.configuredOrDefaults();
-  wiFiConfig.configuredOrDefaults();
-
-  FastLED.addLeds<WS2812, LEDS_DATA_PIN, GRB>(leds, ledsConfig.numLEDs);
-  Serial.printf("Controller has %d led(s).\n", ledsConfig.numLEDs);
-
-  Serial.println("Initializing WiFi...");
-
-  if (!wiFiConfig.configured)
+  if (!config.Load())
   {
-    Serial.println("WiFi has never been configured. Starting in Access-Point mode...");
+    Serial.println(F("No existing configuration was found. Assuming default configuration."));
+  }
+  else
+  {
+    Serial.println(F("Loaded existing configuration."));
+  }
+
+  FastLED.addLeds<WS2812, LEDS_DATA_PIN, GRB>(leds, config.num_leds);
+  Serial.printf("Controller has %d led(s).\n", config.num_leds);
+
+  Serial.println(F("Initializing WiFi..."));
+
+  if (!config.hasSSID())
+  {
+    Serial.println(F("WiFi has never been configured. Starting in Access-Point mode..."));
 
     IPAddress ip(192, 168, 16, 1);
     IPAddress gateway(192, 168, 16, 1);
@@ -103,15 +66,15 @@ void setup(void)
     }
     else
     {
-      Serial.println("Failed to start Access-Point! Something might be wrong with the chip.");
+      Serial.println(F("Failed to start Access-Point! Something might be wrong with the chip."));
     }
   }
   else
   {
-    Serial.println("WiFi has been configured. Starting in client mode...");
+    Serial.println(F("WiFi has been configured. Starting in client mode..."));
 
-    wifiMulti.addAP(wiFiConfig.ssid, wiFiConfig.passphrase);
-    Serial.printf("Connecting to '%s'...\n", wiFiConfig.ssid);
+    wifiMulti.addAP(config.ssid, config.passphrase);
+    Serial.printf("Connecting to '%s'...\n", config.ssid);
 
     while (wifiMulti.run() != WL_CONNECTED)
     {
@@ -122,26 +85,36 @@ void setup(void)
       digitalWrite(EXTERNAL_LED_PIN, LOW);
     }
 
-    Serial.printf("Connected to %s.\n", wiFiConfig.ssid);
+    Serial.printf("Connected to '%s'.\n", config.ssid);
     Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
   }
 
-  server.on("/v1/status/", HTTP_GET, handleGetStatus);
-  server.on("/v1/status/", HTTP_PUT, handleSetStatus);
-  server.onNotFound(handleNotFound);
+  startWebServer(config.http_port);
 
-  const char *headerkeys[] = {"content-type"};
-  server.collectHeaders(headerkeys, sizeof(headerkeys) / sizeof(char *));
-  server.begin(wiFiConfig.httpPort);
+  Serial.printf("HTTP server started on port %d.\n", config.http_port);
 
-  Serial.printf("HTTP server started on port %d.\n", wiFiConfig.httpPort);
+  if (config.hasName())
+  {
+    Serial.printf("Using configured name '%s' as a hostname.\n", config.name);
+    WiFi.hostname(config.name);
+
+    if (MDNS.begin(config.name, WiFi.localIP()))
+    {
+      Serial.println(F("MDNS has been set up."));
+      MDNS.addService("http", "tcp", config.http_port);
+      MDNS.addService("ohm-led", "tcp", config.http_port);
+    } else {
+      Serial.println(F("Failed to setup MDNS."));
+    }
+  }
 }
 
 int pressedTime = 0;
 
 void loop(void)
 {
-  server.handleClient();
+  webServerLoop();
+  MDNS.update();
 
   if (digitalRead(BUTTON_PIN) == LOW)
   {
@@ -211,53 +184,4 @@ void loop(void)
     digitalWrite(EXTERNAL_LED_PIN, LOW);
     FastLED.showColor(CRGB::Red);
   }
-}
-
-void handleGetStatus()
-{
-  int v = analogRead(A0);
-  char tmp[16];
-  snprintf(tmp, 16, "{\"value\": %0.2f}", v / 1024.0f);
-  server.send(200, "application/json", tmp);
-}
-
-void handleSetStatus()
-{
-  if (!server.hasArg("plain"))
-  {
-    server.send(400, "text/plain", "Missing message body.\n");
-    return;
-  }
-
-  const String contentType = server.header("content-type");
-
-  if (contentType != "application/json")
-  {
-    char tmp[128];
-    snprintf(tmp, 128, "Expecting 'application/json' content-type, got: '%s'.\n", contentType.c_str());
-    server.send(400, "text/plain", tmp);
-    return;
-  }
-
-  StaticJsonDocument<64> doc;
-
-  DeserializationError error = deserializeJson(doc, server.arg("plain"));
-
-  if (error)
-  {
-    char tmp[128];
-    snprintf(tmp, 128, "JSON error: %s", error.c_str());
-    server.send(400, "text/plain", tmp);
-    return;
-  }
-
-  static uint8_t hue = 0;
-  FastLED.showColor(CHSV(hue += 32, 255, 255));
-
-  server.send(200, "application/json", "{}\n");
-}
-
-void handleNotFound()
-{
-  server.send(404, "text/plain", "Not found.\n");
 }
