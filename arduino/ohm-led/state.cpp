@@ -45,6 +45,8 @@ void setupState()
 
 void fire()
 {
+    random16_add_entropy(analogRead(A0));
+
     // Array of temperature readings at each simulation cell
     static byte heat[MAX_LEDS];
 
