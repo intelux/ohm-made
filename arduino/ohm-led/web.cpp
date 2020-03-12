@@ -88,8 +88,14 @@ void handleSetConfiguration()
 
 void handleGetState()
 {
-    //TODO: Implement.
-    server.send(200, "application/json", "{}\n");
+    StaticJsonDocument<256> json;
+    state.toJsonDocument(json);
+
+    String body;
+    serializeJsonPretty(json, body);
+    body += '\n';
+
+    server.send(200, "application/json", body);
 }
 
 void handleSetState()
@@ -110,7 +116,7 @@ void handleSetState()
         return;
     }
 
-    StaticJsonDocument<64> doc;
+    StaticJsonDocument<256> doc;
 
     DeserializationError error = deserializeJson(doc, server.arg("plain"));
 

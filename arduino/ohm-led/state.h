@@ -18,7 +18,8 @@ enum StateMode
 class State
 {
 public:
-    bool fromJsonDocument(const StaticJsonDocument<64>& json);
+    bool fromJsonDocument(const StaticJsonDocument<256>& json);
+    void toJsonDocument(StaticJsonDocument<256> &json);
     void cycle();
     void print();
 

@@ -5,7 +5,7 @@
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
-bool State::fromJsonDocument(const StaticJsonDocument<64> &json)
+bool State::fromJsonDocument(const StaticJsonDocument<256> &json)
 {
     const String newModeName = json["mode"].as<String>();
     StateMode newMode = StateMode_Count;
@@ -77,6 +77,55 @@ bool State::fromJsonDocument(const StaticJsonDocument<64> &json)
     print();
 
     return true;
+}
+
+void State::toJsonDocument(StaticJsonDocument<256> &json)
+{
+    json.clear();
+
+    switch (mode)
+    {
+    case StateMode_Off:
+        json["mode"] = "off";
+        break;
+
+    case StateMode_On:
+        json["mode"] = "on";
+        json["hue"] = hue;
+        json["saturation"] = saturation;
+        json["value"] = value;
+        break;
+
+    case StateMode_Pulse:
+        json["mode"] = "pulse";
+        json["hue"] = hue;
+        json["saturation"] = saturation;
+        json["value"] = value;
+        json["period"] = period;
+        break;
+
+    case StateMode_Rainbow:
+        json["mode"] = "rainbow";
+        json["period"] = period;
+        break;
+
+    case StateMode_KnightRider:
+        json["mode"] = "knight-rider";
+        json["hue"] = hue;
+        json["saturation"] = saturation;
+        json["value"] = value;
+        json["period"] = period;
+        break;
+
+    case StateMode_Fire:
+        json["mode"] = "fire";
+        json["fire-cooling"] = fire_cooling;
+        json["fire-sparking"] = fire_sparking;
+        break;
+
+    default:
+        json["mode"] = "off";
+    }
 }
 
 void State::cycle()
