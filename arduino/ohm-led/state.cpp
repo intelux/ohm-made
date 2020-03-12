@@ -213,8 +213,6 @@ void fire()
 
 void stateLoop()
 {
-    random16_add_entropy(analogRead(A0));
-
     {
         static int lastUpdate = millis();
         // Make sure we don't update fast than necessary.
