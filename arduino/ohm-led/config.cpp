@@ -4,6 +4,9 @@
 
 Config config;
 
+const char *Config::AP_SSID = "ohm-led";
+const char *Config::AP_PASSPHRASE = "password";
+
 bool Config::Load()
 {
     bool result = true;

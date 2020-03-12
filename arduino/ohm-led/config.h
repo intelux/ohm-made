@@ -3,10 +3,6 @@
 #include <cstdint>
 #include <cstring>
 
-// The default Access-Point parameters.
-#define AP_SSID "ohm-led"
-#define AP_PASSPHRASE "password"
-
 // The maximum support number of leds.
 #define MAX_LEDS 128
 
@@ -18,6 +14,8 @@
 class Config
 {
 public:
+    static const char* AP_SSID;
+    static const char* AP_PASSPHRASE;
     static const uint64_t MAGIC_VALUE = 0xBADA551;
     static const uint16_t DEFAULT_HTTP_PORT = 80;
     static const uint16_t DEFAULT_NUM_LEDS = 16;

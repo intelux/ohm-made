@@ -122,7 +122,7 @@ void handleSetState()
         return;
     }
 
-    if (!state.FromJsonDocument(doc))
+    if (!state.fromJsonDocument(doc))
     {
         server.send(400, "text/plain", "Invalid state.\n");
         return;

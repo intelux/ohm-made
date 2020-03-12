@@ -1,8 +1,10 @@
 #include "reset.h"
 
 #include "config.h"
+#include "state.h"
 
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
 
 void blinkWithPeriod(int duration, int durationMin, int durationMax, int period)
 {
@@ -17,16 +19,21 @@ void blinkWithPeriod(int duration, int durationMin, int durationMax, int period)
 void resetLoop()
 {
     static int pressedTime = millis();
+    int pressedDuration = millis() - pressedTime;
 
     // If the button is not pressed, keep tracking the time of the last non-press to use as a reference.
     if (digitalRead(BUTTON_PIN) != LOW)
     {
         pressedTime = millis();
         digitalWrite(EXTERNAL_LED_PIN, LOW);
+
+        if ((pressedDuration >= 50) && (pressedDuration < 1000))
+        {
+            state.cycle();
+        }
+
         return;
     }
-
-    int pressedDuration = millis() - pressedTime;
 
     blinkWithPeriod(pressedDuration, 0, 2000, 500);
     blinkWithPeriod(pressedDuration, 2000, 4000, 250);

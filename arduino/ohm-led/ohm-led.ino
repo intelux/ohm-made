@@ -42,15 +42,21 @@ void setup(void)
     IPAddress ip(192, 168, 16, 1);
     IPAddress gateway(192, 168, 16, 1);
     IPAddress subnet(255, 255, 255, 0);
-    WiFi.softAPConfig(ip, gateway, subnet);
 
-    uint8_t mode = 0;
-    wifi_softap_set_dhcps_offer_option(OFFER_ROUTER, &mode);
-
-    if (WiFi.softAP(AP_SSID, AP_PASSPHRASE))
+    if (!WiFi.softAPConfig(ip, gateway, subnet))
     {
-      Serial.printf("Access-Point SSID: %s\n", AP_SSID);
-      Serial.printf("Access-Point passphrase: %s\n", AP_PASSPHRASE);
+      Serial.println(F("Failed to configure WiFi access-point."));
+      return;
+    }
+
+    // Uncommenting this prevents the DHCP server to send a default gateway.
+    //uint8_t mode = 0;
+    //wifi_softap_set_dhcps_offer_option(OFFER_ROUTER, &mode);
+
+    if (WiFi.softAP(Config::AP_SSID, Config::AP_PASSPHRASE))
+    {
+      Serial.printf("Access-Point SSID: %s\n", Config::AP_SSID);
+      Serial.printf("Access-Point passphrase: %s\n", Config::AP_PASSPHRASE);
       Serial.printf("Access-Point IP address: %s\n", WiFi.softAPIP().toString().c_str());
     }
     else
@@ -92,7 +98,9 @@ void setup(void)
       Serial.println(F("MDNS has been set up."));
       MDNS.addService("http", "tcp", config.http_port);
       MDNS.addService("ohm-led", "tcp", config.http_port);
-    } else {
+    }
+    else
+    {
       Serial.println(F("Failed to setup MDNS."));
     }
   }

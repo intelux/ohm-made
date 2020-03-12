@@ -5,18 +5,124 @@
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
-bool State::FromJsonDocument(const StaticJsonDocument<64> &json)
+bool State::fromJsonDocument(const StaticJsonDocument<64> &json)
 {
-    const StateMode newMode = static_cast<StateMode>(json["mode"].as<int>());
+    const String newModeName = json["mode"].as<String>();
+    StateMode newMode = StateMode_Count;
 
-    if ((newMode < StateMode_Off) || (newMode >= StateMode_Count))
+    Serial.printf("Parsing state from JSON document for requested mode '%s'\n", newModeName.c_str());
+
+    if (newModeName == "off")
     {
+        newMode = StateMode_Off;
+    }
+    else if (newModeName == "on")
+    {
+        newMode = StateMode_On;
+    }
+    else if (newModeName == "pulse")
+    {
+        newMode = StateMode_Pulse;
+    }
+    else if (newModeName == "rainbow")
+    {
+        newMode = StateMode_Rainbow;
+    }
+    else if (newModeName == "knight-rider")
+    {
+        newMode = StateMode_KnightRider;
+    }
+    else if (newModeName == "fire")
+    {
+        newMode = StateMode_Fire;
+    }
+
+    switch (newMode)
+    {
+    case StateMode_Off:
+        break;
+
+    case StateMode_On:
+        hue = json["hue"] | hue;
+        saturation = json["saturation"] | saturation;
+        value = json["value"] | value;
+        break;
+
+    case StateMode_Pulse:
+        hue = json["hue"] | hue;
+        saturation = json["saturation"] | saturation;
+        value = json["value"] | value;
+        period = json["period"] | period;
+        break;
+
+    case StateMode_Rainbow:
+        break;
+
+    case StateMode_KnightRider:
+        period = json["period"] | period;
+        break;
+
+    case StateMode_Fire:
+        fire_cooling = json["fire-cooling"] | fire_cooling;
+        fire_sparking = json["fire-sparking"] | fire_sparking;
+        break;
+
+    default:
+        Serial.printf("Ignoring invalid state '%s' from JSON document.", newModeName.c_str());
         return false;
     }
 
     mode = newMode;
 
+    print();
+
     return true;
+}
+
+void State::cycle()
+{
+    mode = static_cast<StateMode>(static_cast<int>(mode + 1));
+
+    if (mode >= StateMode_Count)
+    {
+        mode = StateMode_Off;
+    }
+
+    print();
+}
+
+void State::print()
+{
+    switch (mode)
+    {
+    case StateMode_Off:
+        Serial.println("State: off.");
+        break;
+
+    case StateMode_On:
+        Serial.printf("State: on. HSV: %02x%02x%02x.\n", hue, saturation, value);
+        break;
+
+    case StateMode_Pulse:
+        Serial.printf("State: pulse. HSV: %02x%02x%02x. Period: %dms\n", hue, saturation, value, period);
+        break;
+
+    case StateMode_Rainbow:
+        Serial.println("State: rainbow.");
+        break;
+
+    case StateMode_KnightRider:
+        Serial.printf("State: knight-rider. Period: %dms\n", period);
+        break;
+
+    case StateMode_Fire:
+        Serial.printf("State: fire. Fire cooling: %d. Fire sparking: %d.\n", fire_cooling, fire_sparking);
+        break;
+
+    default:
+        Serial.println("State: invalid.");
+    }
+
 }
 
 State state;
@@ -29,31 +135,53 @@ void setupState()
     FastLED.setBrightness(255);
 }
 
-// There are two main parameters you can play with to control the look and
-// feel of your fire: COOLING (used in step 1 above), and SPARKING (used
-// in step 3 above).
-//
-// COOLING: How much does the air cool as it rises?
-// Less cooling = taller flames.  More cooling = shorter flames.
-// Default 55, suggested range 20-100
-#define COOLING 40
+void pulse()
+{
+    int timePosition = millis() % state.period;
+    int fadeLevel = (255 * abs(timePosition - state.period / 2) * 2) / state.period;
 
-// SPARKING: What chance (out of 255) is there that a new spark will be lit?
-// Higher chance = more roaring fire.  Lower chance = more flickery fire.
-// Default 120, suggested range 50-200.
-#define SPARKING 80
+    fill_solid(leds, config.num_leds, CHSV(state.hue, state.saturation, state.value));
+    fadeToBlackBy(leds, config.num_leds, fadeLevel);
+
+    FastLED.show();
+}
+
+void rainbow()
+{
+    fill_rainbow(leds, config.num_leds, 0, 255 / config.num_leds);
+
+    FastLED.show();
+}
+
+void knight_rider()
+{
+    int timePosition = millis() % state.period;
+    int position = (config.num_leds * abs(timePosition - state.period / 2) * 2) / state.period;
+
+    for (int i = 0; i < config.num_leds; i++)
+    {
+        if (i == position)
+        {
+            leds[i] = CHSV(state.hue, state.saturation, state.value);
+        }
+        else
+        {
+            leds[i] = CRGB::Black;
+        }
+    }
+
+    FastLED.show();
+}
 
 void fire()
 {
-    random16_add_entropy(analogRead(A0));
-
     // Array of temperature readings at each simulation cell
     static byte heat[MAX_LEDS];
 
     // Step 1.  Cool down every cell a little
     for (int i = 0; i < config.num_leds; i++)
     {
-        heat[i] = qsub8(heat[i], random8(0, ((COOLING * 10) / config.num_leds) + 2));
+        heat[i] = qsub8(heat[i], random8(0, ((state.fire_cooling * 10) / config.num_leds) + 2));
     }
 
     // Step 2.  Heat from each cell drifts 'up' and diffuses a little
@@ -63,7 +191,7 @@ void fire()
     }
 
     // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-    if (random8() < SPARKING)
+    if (random8() < state.fire_sparking)
     {
         int y = random8(7);
         heat[y] = qadd8(heat[y], random8(160, 255));
@@ -79,21 +207,27 @@ void fire()
 
         leds[j] = color;
     }
+
+    FastLED.show();
 }
 
 void stateLoop()
 {
-    static int lastUpdate = millis();
-    // Make sure we don't update fast than necessary.
-    const int elapsed = millis() - lastUpdate;
-    const int frame_time_left = (1000 / config.fps) - elapsed;
+    random16_add_entropy(analogRead(A0));
 
-    if (frame_time_left > 0)
     {
-        return;
-    }
+        static int lastUpdate = millis();
+        // Make sure we don't update fast than necessary.
+        const int elapsed = millis() - lastUpdate;
+        const int frame_time_left = (1000 / config.fps) - elapsed;
 
-    lastUpdate = millis();
+        if (frame_time_left > 0)
+        {
+            return;
+        }
+
+        lastUpdate = millis();
+    }
 
     switch (state.mode)
     {
@@ -103,13 +237,17 @@ void stateLoop()
     case StateMode_On:
         FastLED.showColor(CHSV(state.hue, state.saturation, state.value));
         break;
+    case StateMode_Pulse:
+        pulse();
+        break;
     case StateMode_Rainbow:
-        fill_rainbow(leds, config.num_leds, 0);
-        FastLED.show();
+        rainbow();
+        break;
+    case StateMode_KnightRider:
+        knight_rider();
         break;
     case StateMode_Fire:
         fire();
-        FastLED.show();
         break;
     default:
         FastLED.showColor(CRGB::Black);
