@@ -68,6 +68,7 @@ void setup(void)
   {
     Serial.println(F("WiFi has been configured. Starting in client mode..."));
 
+    WiFi.softAPdisconnect(true);
     wifiMulti.addAP(config.ssid, config.passphrase);
     Serial.printf("Connecting to '%s'...\n", config.ssid);
 
