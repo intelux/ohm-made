@@ -31,6 +31,12 @@ const std::map<Easing, const char *> easingNames = {
     {EaseInBounce, "in-bounce"},
     {EaseOutBounce, "out-bounce"},
     {EaseInOutBounce, "in-out-bounce"},
+    {EaseInExpo, "in-expo"},
+    {EaseOutExpo, "out-expo"},
+    {EaseInOutExpo, "in-out-expo"},
+    {EaseInCirc, "in-circ"},
+    {EaseOutCirc, "out-circ"},
+    {EaseInOutCirc, "in-out-circ"},
 };
 
 StateMode modeFromString(const String &s)
@@ -180,7 +186,8 @@ int State::easeTime(int mult)
 
     const auto f = getEasingFunction(easing);
     const int ts = millis() % period;
-    const double t = f(static_cast<double>(ts) / (period - 1));
+    const double rt = static_cast<double>(ts) / (period - 1);
+    const double t = f(rt);
 
     return static_cast<int>(round(t * mult));
 }

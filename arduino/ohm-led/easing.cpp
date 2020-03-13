@@ -8,6 +8,12 @@
 #define PI 3.1415926545
 #endif
 
+#ifdef abs
+#undef abs
+#endif
+
+template<class T> inline T abs(T val) { return val < 0 ? -val : val; }
+
 double easeLinear(double t)
 {
     return t;
@@ -55,7 +61,7 @@ double easeOutCubic(double t)
 
 double easeInOutCubic(double t)
 {
-    return t < 0.5 ? 4 * t * t * t : 1 + (--t) * (2 * (--t)) * (2 * t);
+    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
 }
 
 double easeInQuart(double t)
