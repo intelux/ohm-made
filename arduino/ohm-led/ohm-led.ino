@@ -21,6 +21,8 @@ void setup(void)
   pinMode(EXTERNAL_LED_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
 
+  digitalWrite(EXTERNAL_LED_PIN, HIGH);
+
   if (!config.Load())
   {
     Serial.println(F("No existing configuration was found. Assuming default configuration."));
@@ -75,10 +77,8 @@ void setup(void)
     while (wifiMulti.run() != WL_CONNECTED)
     {
       digitalWrite(LED_BUILTIN, HIGH);
-      digitalWrite(EXTERNAL_LED_PIN, HIGH);
       delay(250);
       digitalWrite(LED_BUILTIN, LOW);
-      digitalWrite(EXTERNAL_LED_PIN, LOW);
     }
 
     Serial.printf("Connected to '%s'.\n", config.ssid);
@@ -105,6 +105,8 @@ void setup(void)
       Serial.println(F("Failed to setup MDNS."));
     }
   }
+
+  digitalWrite(EXTERNAL_LED_PIN, LOW);
 }
 
 void loop(void)
