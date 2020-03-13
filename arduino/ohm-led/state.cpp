@@ -185,7 +185,13 @@ int State::easeTime(int mult)
     }
 
     const auto f = getEasingFunction(easing);
-    const int ts = millis() % period;
+    int ts = millis() % (period * 2);
+
+    if (ts >= period)
+    {
+        ts = 2 * period - ts;
+    }
+
     const double rt = static_cast<double>(ts) / (period - 1);
     const double t = f(rt);
 
