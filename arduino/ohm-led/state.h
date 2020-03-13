@@ -12,8 +12,9 @@ enum StateMode
     StateMode_On = 1,
     StateMode_Pulse = 2,
     StateMode_Rainbow = 3,
-    StateMode_KnightRider = 4,
-    StateMode_Fire = 5,
+    StateMode_Balls = 4,
+    StateMode_KnightRider = 5,
+    StateMode_Fire = 6,
     StateMode_Count,
 };
 
@@ -31,7 +32,7 @@ public:
     void toJsonDocument(StaticJsonDocument<256> &json);
     void cycle();
     void printState();
-    int easeTime(int time);
+    int easeTime(Easing easing, int time, int mult);
 
     uint64_t revision = 0;
     StateMode mode = StateMode_Off;
@@ -40,6 +41,7 @@ public:
     uint8_t value = 255;
     Easing easing = EaseInOutQuad;
     uint32_t period = 5000;
+    uint8_t num_balls = 1;
     uint8_t fire_cooling = 40;
     uint8_t fire_sparking = 80;
 };

@@ -8,11 +8,15 @@
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
+#define MIN_BALLS 1
+#define MAX_BALLS 10
+
 const std::map<StateMode, const char *> modeNames = {
     {StateMode_Off, "off"},
     {StateMode_On, "on"},
     {StateMode_Pulse, "pulse"},
     {StateMode_Rainbow, "rainbow"},
+    {StateMode_Balls, "balls"},
     {StateMode_KnightRider, "knight-rider"},
     {StateMode_Fire, "fire"},
 };
@@ -119,6 +123,8 @@ StateUpdateResult State::fromJsonDocument(const StaticJsonDocument<256> &json)
     value = json["value"] | value;
     easing = newEasing;
     period = json["period"] | period;
+    num_balls = json["num-balls"] | num_balls;
+    num_balls = min(uint8_t(MAX_BALLS), max(uint8_t(MIN_BALLS), num_balls));
     fire_cooling = json["fire-cooling"] | fire_cooling;
     fire_sparking = json["fire-sparking"] | fire_sparking;
 
@@ -140,6 +146,7 @@ void State::toJsonDocument(StaticJsonDocument<256> &json)
     json["value"] = value;
     json["easing"] = easingToString(easing);
     json["period"] = period;
+    json["num-balls"] = num_balls;
     json["fire-cooling"] = fire_cooling;
     json["fire-sparking"] = fire_sparking;
 }
@@ -162,7 +169,8 @@ void State::printState()
 {
     Serial.printf("State: %s.\n", modeToString(mode).c_str());
     Serial.printf("HSV: %02x%02x%02x.\n", hue, saturation, value);
-    Serial.printf("Period: %dms\n", period);
+    Serial.printf("Period: %dms.\n", period);
+    Serial.printf("Num balls: %d.\n", num_balls);
     Serial.printf("Fire cooling: %d.\n", fire_cooling);
     Serial.printf("Fire sparking: %d.\n", fire_sparking);
     Serial.printf("Easing: %s.\n", easingToString(easing).c_str());
@@ -178,14 +186,14 @@ void setupState()
     FastLED.setBrightness(255);
 }
 
-int State::easeTime(int mult)
+int State::easeTime(Easing easing, int time, int mult)
 {
     if (period <= 0) {
         return 0;
     }
 
     const auto f = getEasingFunction(easing);
-    int ts = millis() % (period * 2);
+    int ts = time % (period * 2);
 
     if (ts >= period)
     {
@@ -200,7 +208,7 @@ int State::easeTime(int mult)
 
 void pulse()
 {
-    const int fadeLevel = state.easeTime(255);
+    const int fadeLevel = state.easeTime(state.easing, millis(), 255);
 
     fill_solid(leds, config.num_leds, CHSV(state.hue, state.saturation, state.value));
     fadeToBlackBy(leds, config.num_leds, fadeLevel);
@@ -215,9 +223,46 @@ void rainbow()
     FastLED.show();
 }
 
+struct ballInfo {
+    int timeOffset;
+    double multiplier;
+    CRGB color;
+};
+
+std::vector<ballInfo> initializeBalls()
+{
+    std::vector<ballInfo> ballsInfo;
+
+    ballsInfo.resize(MAX_BALLS);
+
+    for (int i = 0; i < MAX_BALLS; i++)
+    {
+        ballsInfo[i].timeOffset = random(state.period * 2);
+        ballsInfo[i].multiplier = 1.0d + (random(50) / 50.0d);
+        ballsInfo[i].color = CHSV((i * 255) / MAX_BALLS, state.saturation, state.value);
+    }
+
+    return ballsInfo;
+}
+
+void balls()
+{
+    static std::vector<ballInfo> ballsInfo = initializeBalls();
+
+    fill_solid(leds, config.num_leds, CRGB::Black);
+
+    for (int i = 0; i < state.num_balls; i++)
+    {
+        const int position = state.easeTime(state.easing, round(millis() * ballsInfo[i].multiplier) + ballsInfo[i].timeOffset, config.num_leds - 1);
+        leds[position] = blend(ballsInfo[i].color, leds[position], 0.5);
+    }
+
+    FastLED.show();
+}
+
 void knight_rider()
 {
-    const int position = state.easeTime(config.num_leds - 1);
+    const int position = state.easeTime(state.easing, millis(), config.num_leds - 1);
 
     for (int i = 0; i < config.num_leds; i++)
     {
@@ -301,6 +346,9 @@ void stateLoop()
         break;
     case StateMode_Rainbow:
         rainbow();
+        break;
+    case StateMode_Balls:
+        balls();
         break;
     case StateMode_KnightRider:
         knight_rider();
