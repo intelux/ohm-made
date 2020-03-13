@@ -15,14 +15,22 @@ enum StateMode
     StateMode_Count,
 };
 
+enum StateUpdateResult
+{
+    StateUpdateResult_Success = 0,
+    StateUpdateResult_InvalidInput = 1,
+    StateUpdateResult_OutdatedInput = 2,
+};
+
 class State
 {
 public:
-    bool fromJsonDocument(const StaticJsonDocument<256>& json);
+    StateUpdateResult fromJsonDocument(const StaticJsonDocument<256>& json);
     void toJsonDocument(StaticJsonDocument<256> &json);
     void cycle();
     void print();
 
+    uint64_t revision = 0;
     StateMode mode = StateMode_Off;
     uint8_t hue = 0;
     uint8_t saturation = 0;

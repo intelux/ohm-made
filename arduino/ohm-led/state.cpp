@@ -5,7 +5,7 @@
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
-bool State::fromJsonDocument(const StaticJsonDocument<256> &json)
+StateUpdateResult State::fromJsonDocument(const StaticJsonDocument<256> &json)
 {
     const String newModeName = json["mode"].as<String>();
     StateMode newMode = StateMode_Count;
@@ -35,6 +35,14 @@ bool State::fromJsonDocument(const StaticJsonDocument<256> &json)
     else if (newModeName == "fire")
     {
         newMode = StateMode_Fire;
+    }
+
+    uint64_t requestRevision = json["revision"] | revision;
+
+    if (requestRevision != revision)
+    {
+        Serial.printf("Ignoring outdated state with revision %ul when %ul was expected.", requestRevision, revision);
+        return StateUpdateResult_OutdatedInput;
     }
 
     switch (newMode)
@@ -69,19 +77,22 @@ bool State::fromJsonDocument(const StaticJsonDocument<256> &json)
 
     default:
         Serial.printf("Ignoring invalid state '%s' from JSON document.", newModeName.c_str());
-        return false;
+        return StateUpdateResult_InvalidInput;
     }
 
     mode = newMode;
+    revision++;
 
     print();
 
-    return true;
+    return StateUpdateResult_Success;
 }
 
 void State::toJsonDocument(StaticJsonDocument<256> &json)
 {
     json.clear();
+
+    json["revision"] = revision;
 
     switch (mode)
     {
@@ -136,6 +147,8 @@ void State::cycle()
     {
         mode = StateMode_Off;
     }
+
+    revision++;
 
     print();
 }

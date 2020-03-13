@@ -86,7 +86,7 @@ void handleSetConfiguration()
     ESP.restart();
 }
 
-void handleGetState()
+void handleGetStateWithStatusCode(int statusCode)
 {
     StaticJsonDocument<256> json;
     state.toJsonDocument(json);
@@ -95,7 +95,12 @@ void handleGetState()
     serializeJsonPretty(json, body);
     body += '\n';
 
-    server.send(200, "application/json", body);
+    server.send(statusCode, "application/json", body);
+}
+
+void handleGetState()
+{
+    handleGetStateWithStatusCode(200);
 }
 
 void handleSetState()
@@ -128,13 +133,24 @@ void handleSetState()
         return;
     }
 
-    if (!state.fromJsonDocument(doc))
+    const StateUpdateResult result = state.fromJsonDocument(doc);
+
+    switch (result)
     {
-        server.send(400, "text/plain", "Invalid state.\n");
-        return;
+        case StateUpdateResult_Success:
+            handleGetState();
+            break;
+        case StateUpdateResult_InvalidInput:
+            server.send(400, "text/plain", "Invalid state.\n");
+            break;
+        case StateUpdateResult_OutdatedInput:
+            handleGetStateWithStatusCode(409);
+            break;
+        default:
+            server.send(500, "text/plain", "Internal error.\n");
+            break;
     }
 
-    handleGetState();
 }
 
 void handleNotFound()
