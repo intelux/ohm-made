@@ -4,6 +4,8 @@
 
 #include <ArduinoJson.h>
 
+#include "easing.h"
+
 enum StateMode
 {
     StateMode_Off = 0,
@@ -28,13 +30,15 @@ public:
     StateUpdateResult fromJsonDocument(const StaticJsonDocument<256>& json);
     void toJsonDocument(StaticJsonDocument<256> &json);
     void cycle();
-    void print();
+    void printState();
+    int easeTime(int time);
 
     uint64_t revision = 0;
     StateMode mode = StateMode_Off;
     uint8_t hue = 0;
     uint8_t saturation = 0;
     uint8_t value = 255;
+    Easing easing = EaseInOutQuad;
     uint32_t period = 5000;
     uint8_t fire_cooling = 40;
     uint8_t fire_sparking = 80;

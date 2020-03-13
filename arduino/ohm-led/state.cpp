@@ -1,43 +1,105 @@
 #include "state.h"
 
 #include "config.h"
+#include "easing.h"
+
+#include <map>
 
 #define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
+const std::map<StateMode, const char *> modeNames = {
+    {StateMode_Off, "off"},
+    {StateMode_On, "on"},
+    {StateMode_Pulse, "pulse"},
+    {StateMode_Rainbow, "rainbow"},
+    {StateMode_KnightRider, "knight-rider"},
+    {StateMode_Fire, "fire"},
+};
+
+const std::map<Easing, const char *> easingNames = {
+    {EaseLinear, "linear"},
+    {EaseInQuad, "in-quad"},
+    {EaseOutQuad, "out-quad"},
+    {EaseInOutQuad, "in-out-quad"},
+    {EaseInCubic, "in-cubic"},
+    {EaseOutCubic, "out-cubic"},
+    {EaseInOutCubic, "in-out-cubic"},
+    {EaseInElastic, "in-elastic"},
+    {EaseOutElastic, "out-elastic"},
+    {EaseInOutElastic, "in-out-elastic"},
+    {EaseInBounce, "in-bounce"},
+    {EaseOutBounce, "out-bounce"},
+    {EaseInOutBounce, "in-out-bounce"},
+};
+
+StateMode modeFromString(const String &s)
+{
+    for (const auto &pair : modeNames)
+    {
+        if (s == pair.second)
+        {
+            return pair.first;
+        }
+    }
+
+    return StateMode_Count;
+}
+
+String modeToString(StateMode mode)
+{
+    const auto it = modeNames.find(mode);
+
+    if (it == modeNames.end())
+    {
+        // Let's default to off.
+        return "off";
+    }
+
+    return it->second;
+}
+
+Easing easingFromString(const String &s)
+{
+    for (const auto &pair : easingNames)
+    {
+        if (s == pair.second)
+        {
+            return pair.first;
+        }
+    }
+
+    return EaseCount;
+}
+
+String easingToString(Easing easing)
+{
+    const auto it = easingNames.find(easing);
+
+    if (it == easingNames.end())
+    {
+        // Let's default to linear.
+        return "linear";
+    }
+
+    return it->second;
+}
+
 StateUpdateResult State::fromJsonDocument(const StaticJsonDocument<256> &json)
 {
-    const String newModeName = json["mode"].as<String>();
-    StateMode newMode = StateMode_Count;
-
-    Serial.printf("Parsing state from JSON document for requested mode '%s'\n", newModeName.c_str());
-
-    if (newModeName == "off")
-    {
-        newMode = StateMode_Off;
-    }
-    else if (newModeName == "on")
-    {
-        newMode = StateMode_On;
-    }
-    else if (newModeName == "pulse")
-    {
-        newMode = StateMode_Pulse;
-    }
-    else if (newModeName == "rainbow")
-    {
-        newMode = StateMode_Rainbow;
-    }
-    else if (newModeName == "knight-rider")
-    {
-        newMode = StateMode_KnightRider;
-    }
-    else if (newModeName == "fire")
-    {
-        newMode = StateMode_Fire;
-    }
-
+    const StateMode newMode = modeFromString(json["mode"] | modeToString(mode));
+    const Easing newEasing = easingFromString(json["easing"] | easingToString(easing));
     uint64_t requestRevision = json["revision"] | revision;
+
+    if (newMode == StateMode_Count)
+    {
+        return StateUpdateResult_InvalidInput;
+    }
+
+    if (newEasing == EaseCount)
+    {
+        return StateUpdateResult_InvalidInput;
+    }
 
     if (requestRevision != revision)
     {
@@ -45,45 +107,18 @@ StateUpdateResult State::fromJsonDocument(const StaticJsonDocument<256> &json)
         return StateUpdateResult_OutdatedInput;
     }
 
-    switch (newMode)
-    {
-    case StateMode_Off:
-        break;
-
-    case StateMode_On:
-        hue = json["hue"] | hue;
-        saturation = json["saturation"] | saturation;
-        value = json["value"] | value;
-        break;
-
-    case StateMode_Pulse:
-        hue = json["hue"] | hue;
-        saturation = json["saturation"] | saturation;
-        value = json["value"] | value;
-        period = json["period"] | period;
-        break;
-
-    case StateMode_Rainbow:
-        break;
-
-    case StateMode_KnightRider:
-        period = json["period"] | period;
-        break;
-
-    case StateMode_Fire:
-        fire_cooling = json["fire-cooling"] | fire_cooling;
-        fire_sparking = json["fire-sparking"] | fire_sparking;
-        break;
-
-    default:
-        Serial.printf("Ignoring invalid state '%s' from JSON document.", newModeName.c_str());
-        return StateUpdateResult_InvalidInput;
-    }
-
     mode = newMode;
+    hue = json["hue"] | hue;
+    saturation = json["saturation"] | saturation;
+    value = json["value"] | value;
+    easing = newEasing;
+    period = json["period"] | period;
+    fire_cooling = json["fire-cooling"] | fire_cooling;
+    fire_sparking = json["fire-sparking"] | fire_sparking;
+
     revision++;
 
-    print();
+    printState();
 
     return StateUpdateResult_Success;
 }
@@ -93,50 +128,14 @@ void State::toJsonDocument(StaticJsonDocument<256> &json)
     json.clear();
 
     json["revision"] = revision;
-
-    switch (mode)
-    {
-    case StateMode_Off:
-        json["mode"] = "off";
-        break;
-
-    case StateMode_On:
-        json["mode"] = "on";
-        json["hue"] = hue;
-        json["saturation"] = saturation;
-        json["value"] = value;
-        break;
-
-    case StateMode_Pulse:
-        json["mode"] = "pulse";
-        json["hue"] = hue;
-        json["saturation"] = saturation;
-        json["value"] = value;
-        json["period"] = period;
-        break;
-
-    case StateMode_Rainbow:
-        json["mode"] = "rainbow";
-        json["period"] = period;
-        break;
-
-    case StateMode_KnightRider:
-        json["mode"] = "knight-rider";
-        json["hue"] = hue;
-        json["saturation"] = saturation;
-        json["value"] = value;
-        json["period"] = period;
-        break;
-
-    case StateMode_Fire:
-        json["mode"] = "fire";
-        json["fire-cooling"] = fire_cooling;
-        json["fire-sparking"] = fire_sparking;
-        break;
-
-    default:
-        json["mode"] = "off";
-    }
+    json["mode"] = modeToString(mode);
+    json["hue"] = hue;
+    json["saturation"] = saturation;
+    json["value"] = value;
+    json["easing"] = easingToString(easing);
+    json["period"] = period;
+    json["fire-cooling"] = fire_cooling;
+    json["fire-sparking"] = fire_sparking;
 }
 
 void State::cycle()
@@ -150,41 +149,17 @@ void State::cycle()
 
     revision++;
 
-    print();
+    printState();
 }
 
-void State::print()
+void State::printState()
 {
-    switch (mode)
-    {
-    case StateMode_Off:
-        Serial.println("State: off.");
-        break;
-
-    case StateMode_On:
-        Serial.printf("State: on. HSV: %02x%02x%02x.\n", hue, saturation, value);
-        break;
-
-    case StateMode_Pulse:
-        Serial.printf("State: pulse. HSV: %02x%02x%02x. Period: %dms\n", hue, saturation, value, period);
-        break;
-
-    case StateMode_Rainbow:
-        Serial.println("State: rainbow.");
-        break;
-
-    case StateMode_KnightRider:
-        Serial.printf("State: knight-rider. Period: %dms\n", period);
-        break;
-
-    case StateMode_Fire:
-        Serial.printf("State: fire. Fire cooling: %d. Fire sparking: %d.\n", fire_cooling, fire_sparking);
-        break;
-
-    default:
-        Serial.println("State: invalid.");
-    }
-
+    Serial.printf("State: %s.\n", modeToString(mode).c_str());
+    Serial.printf("HSV: %02x%02x%02x.\n", hue, saturation, value);
+    Serial.printf("Period: %dms\n", period);
+    Serial.printf("Fire cooling: %d.\n", fire_cooling);
+    Serial.printf("Fire sparking: %d.\n", fire_sparking);
+    Serial.printf("Easing: %s.\n", easingToString(easing).c_str());
 }
 
 State state;
@@ -197,10 +172,22 @@ void setupState()
     FastLED.setBrightness(255);
 }
 
+int State::easeTime(int mult)
+{
+    if (period <= 0) {
+        return 0;
+    }
+
+    const auto f = getEasingFunction(easing);
+    const int ts = millis() % period;
+    const double t = f(static_cast<double>(ts) / (period - 1));
+
+    return static_cast<int>(round(t * mult));
+}
+
 void pulse()
 {
-    int timePosition = millis() % state.period;
-    int fadeLevel = (255 * abs(timePosition - state.period / 2) * 2) / state.period;
+    const int fadeLevel = state.easeTime(255);
 
     fill_solid(leds, config.num_leds, CHSV(state.hue, state.saturation, state.value));
     fadeToBlackBy(leds, config.num_leds, fadeLevel);
@@ -217,8 +204,7 @@ void rainbow()
 
 void knight_rider()
 {
-    int timePosition = millis() % state.period;
-    int position = (config.num_leds * abs(timePosition - state.period / 2) * 2) / state.period;
+    const int position = state.easeTime(config.num_leds - 1);
 
     for (int i = 0; i < config.num_leds; i++)
     {
