@@ -77,8 +77,9 @@ void setup(void)
     while (wifiMulti.run() != WL_CONNECTED)
     {
       digitalWrite(LED_BUILTIN, HIGH);
-      delay(250);
+      delay(125);
       digitalWrite(LED_BUILTIN, LOW);
+      delay(125);
     }
 
     Serial.printf("Connected to '%s'.\n", config.ssid);
