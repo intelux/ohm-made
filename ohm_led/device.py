@@ -23,6 +23,9 @@ class Device:
         self.base_url = base_url
         self.timeout = timeout
 
+    def __repr__(self):
+        return 'Device(base_url=%s, timeout=%d)' % (self.base_url, self.timeout)
+
     def _url(self, path):
         return urljoin(self.base_url, path)
 
