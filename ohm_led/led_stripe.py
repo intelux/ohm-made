@@ -5,6 +5,9 @@ import math
 
 from urllib.parse import urljoin
 
+from .error import StateOutdated
+
+
 class LEDStripe:
     """
     Represents and control an Ohm-LED device.
