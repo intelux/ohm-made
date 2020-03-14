@@ -8,23 +8,34 @@ from urllib.parse import urljoin
 from .error import StateOutdated
 
 
-class LEDStripe:
+class Device:
     """
     Represents and control an Ohm-LED device.
     """
 
-    def __init__(self, baseURL, timeout=5):
+    def __init__(self, base_url, timeout=5):
         """
         Instanciates an Ohm-LED device.
 
-        :param baseURL: The base URL for the device.
+        :param base_url: The base URL for the device.
         :param timeout: The maximum time to wait for, in seconds for state updates.
         """
-        self.baseURL = baseURL
+        self.base_url = base_url
         self.timeout = timeout
 
     def _url(self, path):
-        return urljoin(self.baseURL, path)
+        return urljoin(self.base_url, path)
+
+    async def get_info(self):
+        """
+        Get info on the device.
+
+        :return: The info dict.
+        """
+        async with aiohttp.ClientSession() as session:
+            async with async_timeout.timeout(self.timeout):
+                async with session.get(self._url('/v1/info/')) as response:
+                    return await response.json()
 
     async def get_state(self):
         """

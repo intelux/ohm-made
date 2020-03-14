@@ -22,5 +22,6 @@ setuptools.setup(
     install_requires=[
         'aiohttp>=3.6.0',
         'aiodns>=2.0.0',
+        'aiozeroconf>=0.1.8',
     ],
 )
