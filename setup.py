@@ -20,7 +20,7 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'aiohttp>=3.6.2',
+        'aiohttp>=3.6.0',
         'aiodns>=2.0.0',
     ],
 )
