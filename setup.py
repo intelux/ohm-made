@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ohm-made",
-    version="0.0.2",
+    version="0.0.3",
     author="Julien Kauffmann",
     author_email="julien.kauffmann@freelan.org",
     description="A library to control Ohm-Made devices.",
