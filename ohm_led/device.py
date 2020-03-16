@@ -67,6 +67,8 @@ class Device:
         hsv = kwargs.pop('hsv', None)
         period = kwargs.pop('period', None)
         easing = kwargs.pop('easing', None)
+        fire_cooling = kwargs.pop('fire_cooling', None)
+        fire_sparking = kwargs.pop('fire_sparking', None)
 
         if hsv is not None:
             kwargs["hue"], kwargs["saturation"], kwargs["value"] = hsv
