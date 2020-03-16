@@ -51,13 +51,39 @@ class Device:
                 async with session.get(self._url('/v1/state/')) as response:
                     return await response.json()
 
-    async def set_state(self, state):
+    async def set_state(self, state, **kwargs):
         """
         Set the state of the device from a raw state dict.
 
         :param state: The state dict. None values are ignored.
+        :param hsv: If specified, a triplet of (hue, saturation, value).
+        :param period: If specified, the period in seconds of the pulse animation.
+        :param easing: If specified, the easing function to use for animations.
+        :param num_balls: If specified, the number of balls.
+        :param fire_cooling: If specified, the fire cooling factor.
+        :param fire_sparking: If specified, the fire sparking factor.
         :return: The new state dict.
         """
+        hsv = kwargs.pop('hsv', None)
+        period = kwargs.pop('period', None)
+        easing = kwargs.pop('easing', None)
+
+        if hsv is not None:
+            kwargs["hue"], kwargs["saturation"], kwargs["value"] = hsv
+
+        if period is not None:
+            kwargs["period"] = math.floor(period * 1000)
+
+        if easing is not None:
+            kwargs["easing"] = easing
+
+        if fire_cooling is not None:
+            state["fire-cooling"] = fire_cooling
+
+        if fire_sparking is not None:
+            state["fire-sparking"] = fire_sparking
+
+        state.update({k: v for k, v in kwargs.items() if v is not None})
         state = {k: v for k, v in state.items() if v is not None}
 
         async with aiohttp.ClientSession() as session:
@@ -68,116 +94,72 @@ class Device:
 
                     return await response.json()
 
-    async def off(self):
+    async def off(self, **kwargs):
         """
         Turn the LED stripe off completely.
 
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        return await self.set_state({"mode": "off"})
+        return await self.set_state(mode='off', **kwargs)
 
-    async def on(self, hsv=None):
+    async def on(self, **kwargs):
         """
         Turn the LED stripe on.
 
-        :param hsv: If specified, a triplet of (hue, saturation, value).
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        state = {"mode": "on"}
+        return await self.set_state(mode='on', **kwargs)
 
-        if hsv is not None:
-            state["hue"], state["saturation"], state["value"] = hsv
-
-        return await self.set_state(state)
-
-    async def pulse(self, hsv=None, period=None, easing=None):
+    async def pulse(self, **kwargs):
         """
         Turn the LED stripe in pulse mode.
 
-        :param hsv: If specified, a triplet of (hue, saturation, value).
-        :param period: If specified, the period in seconds of the pulse animation.
-        :param easing: If specified, the easing function to use for animations.
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        state = {"mode": "pulse"}
+        return await self.set_state(mode='pulse', **kwargs)
 
-        if hsv is not None:
-            state["hue"], state["saturation"], state["value"] = hsv
-
-        if period is not None:
-            state["period"] = math.floor(period * 1000)
-
-        if easing is not None:
-            state["easing"] = easing
-
-        return await self.set_state(state)
-
-    async def rainbow(self):
+    async def rainbow(self, **kwargs):
         """
         Turn the LED stripe in rainbow mode.
 
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        return await self.set_state({"mode": "rainbow"})
+        return await self.set_state(mode='rainbow', **kwargs)
 
-    async def balls(self, period=None, num_balls=None, easing=None):
+    async def balls(self, **kwargs):
         """
         Turn the LED stripe in balls mode.
 
-        :param period: If specified, the period in seconds of the balls animation.
-        :param num_balls: If specified, the number of balls.
-        :param easing: If specified, the easing function to use for animations.
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        state = {"mode": "balls"}
+        return await self.set_state(mode='balls', **kwargs)
 
-        if period is not None:
-            state["period"] = math.floor(period * 1000)
-
-        if num_balls is not None:
-            state["num-balls"] = num_balls
-
-        if easing is not None:
-            state["easing"] = easing
-
-        return await self.set_state(state)
-
-    async def knight_rider(self, hsv=None, period=None, easing=None):
+    async def knight_rider(self, **kwargs):
         """
         Turn the LED stripe in knight-rider mode.
 
-        :param hsv: If specified, a triplet of (hue, saturation, value).
-        :param period: If specified, the period in seconds of the knight-rider animation.
-        :param easing: If specified, the easing function to use for animations.
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        state = {"mode": "knight-rider"}
+        return await self.set_state(mode='knight-rider', **kwargs)
 
-        if hsv is not None:
-            state["hue"], state["saturation"], state["value"] = hsv
-
-        if period is not None:
-            state["period"] = math.floor(period * 1000)
-
-        if easing is not None:
-            state["easing"] = easing
-
-        return await self.set_state(state)
-
-    async def fire(self, fire_cooling=None, fire_sparking=None):
+    async def fire(self, **kwargs):
         """
         Turn the LED stripe in fire mode.
 
-        :param fire_cooling: If specified, the fire cooling factor.
-        :param fire_sparking: If specified, the fire sparking factor.
+        Any of the named arguments from `set_state` can also be used here.
+
         :return: The new state dict.
         """
-        state = {"mode": "fire"}
-
-        if fire_cooling is not None:
-            state["fire-cooling"] = fire_cooling
-
-        if fire_sparking is not None:
-            state["fire-sparking"] = fire_sparking
-
-        return await self.set_state(state)
+        return await self.set_state(mode='fire', **kwargs)
