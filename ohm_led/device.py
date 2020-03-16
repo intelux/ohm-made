@@ -51,7 +51,7 @@ class Device:
                 async with session.get(self._url('/v1/state/')) as response:
                     return await response.json()
 
-    async def set_state(self, state, **kwargs):
+    async def set_state(self, state={}, **kwargs):
         """
         Set the state of the device from a raw state dict.
 
