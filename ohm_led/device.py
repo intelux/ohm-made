@@ -126,6 +126,16 @@ class Device:
         """
         return await self.set_state(mode='pulse', **kwargs)
 
+    async def colorloop(self, **kwargs):
+        """
+        Turn the LED stripe in colorloop mode.
+
+        Any of the named arguments from `set_state` can also be used here.
+
+        :return: The new state dict.
+        """
+        return await self.set_state(mode='colorloop', **kwargs)
+
     async def rainbow(self, **kwargs):
         """
         Turn the LED stripe in rainbow mode.
@@ -135,16 +145,6 @@ class Device:
         :return: The new state dict.
         """
         return await self.set_state(mode='rainbow', **kwargs)
-
-    async def balls(self, **kwargs):
-        """
-        Turn the LED stripe in balls mode.
-
-        Any of the named arguments from `set_state` can also be used here.
-
-        :return: The new state dict.
-        """
-        return await self.set_state(mode='balls', **kwargs)
 
     async def knight_rider(self, **kwargs):
         """
